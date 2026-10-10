@@ -79,14 +79,15 @@ fn release_minor_and_major_bumps_keep_the_local_contract_dependency_compatible()
 }
 
 #[test]
-fn native_release_caches_do_not_share_build_scripts_across_runner_images() {
+fn native_release_caches_do_not_share_build_scripts_across_runner_images()
+-> Result<(), Box<dyn std::error::Error>> {
     let native = RELEASE
         .split("  native-bundles:")
         .nth(1)
-        .unwrap()
+        .ok_or("missing native bundle job")?
         .split("  distro-bundles:")
         .next()
-        .unwrap();
+        .ok_or("missing native bundle body")?;
     let ids: Vec<_> = native
         .lines()
         .filter_map(|line| line.trim().strip_prefix("- id: "))
@@ -95,10 +96,10 @@ fn native_release_caches_do_not_share_build_scripts_across_runner_images() {
     let cache = native
         .split("- uses: Swatinem/rust-cache@v2")
         .nth(1)
-        .unwrap()
+        .ok_or("missing native cache step")?
         .split("- name:")
         .next()
-        .unwrap();
+        .ok_or("missing native cache body")?;
     let key = cache
         .lines()
         .find_map(|line| line.trim().strip_prefix("key: "))
@@ -112,4 +113,5 @@ fn native_release_caches_do_not_share_build_scripts_across_runner_images() {
         ids.len(),
         "native build scripts must not cross distribution or architecture cache boundaries"
     );
+    Ok(())
 }
