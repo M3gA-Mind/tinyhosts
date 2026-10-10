@@ -28,6 +28,39 @@ async fn run(server: &MockServer, operation: Value) -> Value {
 }
 
 #[tokio::test]
+async fn rpc_list_limits_are_bounded_before_provider_dispatch() {
+    for (requested, expected) in [(0, 1), (u32::MAX, 100), (32, 32)] {
+        let server = MockServer::start().await;
+        for (route, body) in [
+            ("/v10/projects", json!({"projects":[]})),
+            ("/v7/deployments", json!({"deployments":[]})),
+        ] {
+            Mock::given(method("GET"))
+                .and(path(route))
+                .and(wiremock::matchers::query_param(
+                    "limit",
+                    expected.to_string(),
+                ))
+                .respond_with(ResponseTemplate::new(200).set_body_json(body))
+                .expect(1)
+                .mount(&server)
+                .await;
+        }
+        run(
+            &server,
+            json!({"operation":"list_sites", "limit":requested}),
+        )
+        .await;
+        run(
+            &server,
+            json!({"operation":"list_deployments", "site":"shop", "limit":requested}),
+        )
+        .await;
+        server.verify().await;
+    }
+}
+
+#[tokio::test]
 async fn creates_a_site() {
     let server = MockServer::start().await;
     mount(

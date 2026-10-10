@@ -59,7 +59,10 @@ pub async fn execute(request: Request) -> Result<Outcome> {
             Some(site) => Outcome::Site(site),
             None => Outcome::NoSite,
         }),
-        Operation::ListSites { limit } => host.list_sites(limit).await.map(Outcome::Sites),
+        Operation::ListSites { limit } => host
+            .list_sites(limit.clamp(1, 100))
+            .await
+            .map(Outcome::Sites),
         Operation::SetEnv { site, vars } => {
             host.set_env(&site, &vars).await.map(|()| Outcome::Done)
         }
@@ -74,7 +77,7 @@ pub async fn execute(request: Request) -> Result<Outcome> {
         Operation::Deploy { request } => host.deploy(&request).await.map(Outcome::Deployment),
         Operation::Deployment { id } => host.deployment(&id).await.map(Outcome::Deployment),
         Operation::ListDeployments { site, limit } => host
-            .list_deployments(&site, limit)
+            .list_deployments(&site, limit.clamp(1, 100))
             .await
             .map(Outcome::Deployments),
         Operation::DeploymentLogs { id } => {
