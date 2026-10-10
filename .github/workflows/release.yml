@@ -208,7 +208,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      # Native build scripts link against the runner image's system libraries.
+      # Keep Ubuntu releases (and each architecture) in separate caches.
       - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-native-${{ matrix.id }}
 
       - name: Verify native Rust target
         shell: bash
