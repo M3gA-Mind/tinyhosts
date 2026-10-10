@@ -70,8 +70,10 @@ missing module. Prefer many small modules that each do one thing well over few
 broad ones.
 
 Keep public exports centralized in `src/lib.rs` so downstream users have one
-predictable surface. Put shared error variants in `src/error/mod.rs` and return
-the crate-wide `Result<T>` from fallible public APIs.
+predictable surface. Shared wire error variants live in
+`crates/tinyhosts-bus/src/error/mod.rs`; the implementation's `src/error/mod.rs`
+re-exports that vocabulary for compatibility. Return the crate-wide `Result<T>`
+from fallible public APIs.
 
 ### Provider adapters
 
@@ -129,7 +131,8 @@ Use standard `rustfmt` output and Rust 2024 idioms. Do not hand-format around
 
 ### Errors
 
-- One crate-wide `Error` enum in `src/error/mod.rs`, built with `thiserror`.
+- One shared `Error` enum in the contract's `src/error/mod.rs`, built with
+  `thiserror` and re-exported by the implementation's error module.
 - Fallible public functions return `Result<T>`, the crate alias.
 - Add a specific variant instead of stuffing context into a string; error
   messages are lowercase, without trailing punctuation.
