@@ -2,6 +2,60 @@
 use super::*;
 
 #[test]
+fn typed_declarations_preserve_every_recorded_permission_level() {
+    let original: serde_json::Value = serde_json::from_str(TOOL_DECLARATIONS_JSON).unwrap();
+    let tools: Vec<ToolDeclaration> = serde_json::from_value(original.clone()).unwrap();
+    assert_eq!(serde_json::to_value(tools).unwrap(), original);
+}
+
+#[test]
+fn request_debug_and_error_diagnostics_redact_sensitive_details() {
+    let secret = "https://user:secret@example.com/?token=credential";
+    let request: rpc::Request = serde_json::from_value(serde_json::json!({
+        "operation":"list_sites", "base_url":secret, "credentials":{"api_key":"secret"}
+    }))
+    .unwrap();
+    assert!(!format!("{request:?}").contains(secret));
+    for error in [
+        Error::InsecureBaseUrl {
+            base_url: secret.into(),
+        },
+        Error::Transport {
+            provider: "vercel".into(),
+            reason: secret.into(),
+        },
+        Error::Envelope {
+            reason: secret.into(),
+        },
+        Error::ReadBundle {
+            path: secret.into(),
+            reason: secret.into(),
+        },
+    ] {
+        assert!(!error.to_string().contains(secret));
+        assert!(!format!("{error:?}").contains(secret));
+    }
+}
+
+#[test]
+fn raw_credential_debug_redacts_the_key_and_preserves_the_team_wire_field() {
+    let credentials: rpc::Credentials = serde_json::from_value(serde_json::json!({
+        "api_key":"private-key", "team":"team_fixture"
+    }))
+    .unwrap();
+    let debug = format!("{credentials:?}");
+    assert!(!debug.contains("private-key"));
+    assert!(debug.contains("<redacted>"));
+    assert!(debug.contains("team_fixture"));
+    assert!(
+        serde_json::from_value::<rpc::Credentials>(serde_json::json!({
+            "api_key":"private-key", "unexpected":true
+        }))
+        .is_err()
+    );
+}
+
+#[test]
 fn requests_keep_provider_defaults_operation_tags_and_secret_redaction() {
     let request: rpc::Request = serde_json::from_value(serde_json::json!({
         "operation": "list_sites", "credentials": {"api_key": "private-key"}

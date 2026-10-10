@@ -518,7 +518,7 @@ async fn authorized_directory_preparation_uses_execute_without_provider_or_crede
 }
 
 #[tokio::test]
-async fn supplied_deployment_credentials_are_refused_before_provider_dispatch() {
+async fn supplied_deployment_credential_files_are_refused_before_provider_dispatch() {
     let server = MockServer::start().await;
     mount(
         &server,
@@ -537,7 +537,7 @@ async fn supplied_deployment_credentials_are_refused_before_provider_dispatch() 
 }
 
 #[tokio::test]
-async fn supplied_launch_credentials_are_refused_before_site_lookup() {
+async fn supplied_launch_credential_files_are_refused_before_site_lookup() {
     let server = MockServer::start().await;
     let request = json!({ "operation":"launch", "credentials":{"api_key":"fixture"}, "base_url":server.uri(),
         "plan":{"site":{"name":"shop"},"bundle":[{"path":"app/.env.local","contents":"c2VjcmV0"}]}});

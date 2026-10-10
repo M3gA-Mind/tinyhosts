@@ -89,8 +89,9 @@ pub async fn execute(request: Request) -> Result<Outcome> {
         }
         Operation::ListDomains { site } => host.list_domains(&site).await.map(Outcome::Domains),
         Operation::Analytics { query } => host.analytics(&query).await.map(Outcome::Analytics),
-        _ => Err(Error::Envelope {
-            reason: "unsupported operation".into(),
+        _ => Err(Error::Unsupported {
+            provider: request.provider.as_str().into(),
+            capability: "execute this operation".into(),
         }),
     }
 }

@@ -4,7 +4,7 @@ use crate::ProviderId;
 use crate::model::*;
 use serde::{Deserialize, Serialize};
 /// A request to act on one hosting account.
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(bound(
     deserialize = "C: Deserialize<'de>, P: Deserialize<'de>, D: Deserialize<'de>, K: Deserialize<'de> + Default"
 ))]
@@ -29,6 +29,20 @@ pub struct Request<
     /// What to do.
     #[serde(flatten)]
     pub operation: Operation<P, D>,
+}
+
+impl<C: std::fmt::Debug, P: std::fmt::Debug, D: std::fmt::Debug, K: std::fmt::Debug> std::fmt::Debug
+    for Request<C, P, D, K>
+{
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Request")
+            .field("provider", &self.provider)
+            .field("credentials", &"<redacted>")
+            .field("base_url", &"<redacted>")
+            .field("operation", &self.operation)
+            .finish()
+    }
 }
 
 /// One thing a request can ask for.
@@ -196,10 +210,11 @@ pub enum Outcome {
 #[serde(deny_unknown_fields)]
 pub struct Credentials {
     /// Provider API key, consumed only by module-side credential validation.
-    pub api_key: String,
+    #[serde(rename = "api_key")]
+    _api_key: String,
     /// Optional team identifier.
     #[serde(default)]
-    pub team: Option<String>,
+    team: Option<String>,
 }
 impl std::fmt::Debug for Credentials {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

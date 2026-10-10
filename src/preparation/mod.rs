@@ -120,9 +120,20 @@ fn validate(input: &AuthorizedDirectory) -> Result<()> {
 }
 
 fn credential_entry(name: &str) -> bool {
+    let name = name.to_ascii_lowercase();
     matches!(
-        name.to_ascii_lowercase().as_str(),
-        ".ssh" | ".aws" | ".gnupg" | ".azure" | ".kube" | "keychains" | ".env"
+        name.as_str(),
+        ".ssh"
+            | ".aws"
+            | ".gnupg"
+            | ".azure"
+            | ".kube"
+            | "keychains"
+            | ".env"
+            | ".npmrc"
+            | ".netrc"
+            | ".pypirc"
+            | ".git-credentials"
     ) || name.starts_with(".env.")
 }
 

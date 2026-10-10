@@ -14,7 +14,7 @@
 //! until the reader knows which credential was rejected.
 
 /// Errors returned by this crate.
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[derive(thiserror::Error, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Error {
     /// Authorized preparation named an invalid or out-of-scope directory.
@@ -63,7 +63,7 @@ pub enum Error {
     },
 
     /// The filesystem refused a read while building a bundle from a directory.
-    #[error("cannot read {path}: {reason}")]
+    #[error("cannot read bundle entry")]
     ReadBundle {
         /// The path that could not be read.
         path: String,
@@ -84,7 +84,7 @@ pub enum Error {
     InvalidAnalyticsWindow,
 
     /// The request never reached the provider, or its response never arrived.
-    #[error("request to {provider} failed: {reason}")]
+    #[error("request to {provider} failed")]
     Transport {
         /// The provider that was being called.
         provider: String,
@@ -156,7 +156,7 @@ pub enum Error {
     /// `https://` is always accepted; `http://` is accepted only against
     /// `localhost`, `127.0.0.1`, or `::1`, which is what a test suite or a
     /// local mock needs.
-    #[error("base url {base_url} must be https, or http against a loopback host")]
+    #[error("base url must be https, or http against a loopback host")]
     InsecureBaseUrl {
         /// The rejected root, as it was supplied.
         base_url: String,
@@ -205,11 +205,19 @@ pub enum Error {
     },
 
     /// A JSON envelope crossing a process boundary could not be read.
-    #[error("cannot decode the request envelope: {reason}")]
+    #[error("cannot decode the request envelope")]
     Envelope {
         /// The deserialization error.
         reason: String,
     },
+}
+
+// Match Display's redaction: Debug must not expose rejected URLs, parser input
+// or operating-system paths through the retained compatibility fields.
+impl std::fmt::Debug for Error {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, formatter)
+    }
 }
 
 /// The crate's standard result type.

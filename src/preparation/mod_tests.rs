@@ -12,6 +12,38 @@ fn input(root: &Path) -> AuthorizedDirectory {
 }
 
 #[test]
+fn preparation_and_deployment_exclude_standard_credential_files_case_insensitively() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::write(root.path().join("index.html"), "safe").unwrap();
+    let names = [
+        ".npmrc",
+        ".netrc",
+        ".pypirc",
+        ".git-credentials",
+        ".Env.local",
+        ".NPMRC",
+    ];
+    for name in names {
+        std::fs::write(root.path().join(name), "secret").unwrap();
+    }
+    let prepared = prepare_bundle(&input(root.path())).unwrap();
+    assert_eq!(prepared.file_count, 1);
+    assert_eq!(prepared.bundle[0].path, "index.html");
+    for name in names {
+        let bundle = crate::Bundle::from_files(vec![
+            crate::SiteFile::new(name, b"secret".to_vec()).unwrap(),
+        ]);
+        assert!(
+            matches!(
+                validate_deployment_bundle(&bundle),
+                Err(Error::InvalidBundlePath { .. })
+            ),
+            "accepted {name}"
+        );
+    }
+}
+
+#[test]
 fn preparation_preserves_source_bytes_exclusions_and_captured_snapshot() {
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir(root.path().join("app")).unwrap();

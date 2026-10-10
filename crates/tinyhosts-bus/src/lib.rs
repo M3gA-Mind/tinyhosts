@@ -50,6 +50,17 @@ pub struct ToolDeclaration {
     pub parameters_schema: serde_json::Value,
     /// Whether OpenHuman must apply its external-effect approval policy.
     pub external_effect: bool,
+    /// Existing approval classification recorded in the tool catalog.
+    pub permission_level: PermissionLevel,
+}
+
+/// Recorded hosting tool approval vocabulary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PermissionLevel {
+    /// A tool that only reads provider state.
+    ReadOnly,
+    /// A tool that changes provider state.
+    Write,
 }
 
 #[cfg(test)]
