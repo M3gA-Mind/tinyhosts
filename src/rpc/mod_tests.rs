@@ -565,7 +565,7 @@ async fn supplied_deployment_credential_files_are_refused_before_provider_dispat
         "credentials":{"api_key":"fixture"},"base_url":server.uri(),
         "operation":"deploy","request":{"site":"site","bundle":[{"path":".ssh/id_rsa","contents":"c2VjcmV0"}]}
     }).to_string()).await;
-    assert!(matches!(response, Err(Error::InvalidBundlePath { .. })));
+    assert!(matches!(response, Err(Error::CredentialBundlePath { .. })));
     assert!(server.received_requests().await.unwrap().is_empty());
 }
 
@@ -576,7 +576,7 @@ async fn supplied_launch_credential_files_are_refused_before_site_lookup() {
         "plan":{"site":{"name":"shop"},"bundle":[{"path":"app/.env.local","contents":"c2VjcmV0"}]}});
     assert!(matches!(
         execute_json(&request.to_string()).await,
-        Err(Error::InvalidBundlePath { .. })
+        Err(Error::CredentialBundlePath { .. })
     ));
     assert!(server.received_requests().await.unwrap().is_empty());
 }

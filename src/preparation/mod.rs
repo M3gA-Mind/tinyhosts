@@ -158,7 +158,7 @@ pub(crate) fn validate_deployment_bundle(bundle: &crate::Bundle) -> Result<()> {
                 .split('/')
                 .any(|part| part == ".env" || part.starts_with(".env."))
         {
-            return Err(Error::InvalidBundlePath {
+            return Err(Error::CredentialBundlePath {
                 path: file.path().into(),
             });
         }

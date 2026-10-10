@@ -62,6 +62,13 @@ pub enum Error {
         path: String,
     },
 
+    /// A structurally valid bundle path referred to credential material.
+    #[error("bundle contains credential material")]
+    CredentialBundlePath {
+        /// The refused path; never included in Display or Debug.
+        path: String,
+    },
+
     /// The filesystem refused a read while building a bundle from a directory.
     #[error("cannot read bundle entry")]
     ReadBundle {

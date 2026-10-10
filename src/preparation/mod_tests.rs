@@ -1,3 +1,4 @@
+//! Bounded directory preparation and deployment credential exclusions.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::*;
@@ -36,7 +37,7 @@ fn preparation_and_deployment_exclude_standard_credential_files_case_insensitive
         assert!(
             matches!(
                 validate_deployment_bundle(&bundle),
-                Err(Error::InvalidBundlePath { .. })
+                Err(Error::CredentialBundlePath { .. })
             ),
             "accepted {name}"
         );
@@ -116,8 +117,9 @@ fn invalid_scopes_and_bounded_file_reads_are_refused() {
         prepare_bundle(&request),
         Err(Error::PreparationLimit { .. })
     ));
+    let empty = tempfile::tempdir().unwrap();
     assert!(matches!(
-        prepare_bundle(&input(tempfile::tempdir().unwrap().path())),
+        prepare_bundle(&input(empty.path())),
         Err(Error::EmptyBundle)
     ));
 }
@@ -313,4 +315,15 @@ fn source_replaced_by_fifo_is_refused_without_waiting_for_writer() {
         Err(Error::PreparationPath { .. })
     ));
     worker.join().unwrap();
+}
+
+#[test]
+fn credential_refusal_is_distinct_from_malformed_bundle_paths_without_exposing_paths() {
+    for path in ["app/.env.local", ".ssh/id_rsa"] {
+        let bundle =
+            crate::Bundle::from_files(vec![SiteFile::new(path, b"private".to_vec()).unwrap()]);
+        let error = validate_deployment_bundle(&bundle).unwrap_err();
+        assert_eq!(error.to_string(), "bundle contains credential material");
+        assert!(!format!("{error:?}").contains(path));
+    }
 }
