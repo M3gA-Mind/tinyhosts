@@ -4,19 +4,21 @@ set -euo pipefail
 minimum="${1:-90}"
 report="${2:-coverage.json}"
 workspace_root="$(pwd -P)/"
+contract_root="${workspace_root}crates/tinyhosts-bus/src/"
 source_root="${workspace_root}src/"
 
 cargo llvm-cov \
   --locked \
+  --workspace \
   --all-targets \
   --all-features \
   --json \
   --output-path "$report"
 
-covered_files="$(jq --arg source_root "$source_root" '
+covered_files="$(jq --arg source_root "$source_root" --arg contract_root "$contract_root" '
   [
     .data[].files[]
-    | select(.filename | startswith($source_root))
+    | select(.filename | startswith($source_root) or startswith($contract_root))
     | select(.summary.lines.count > 0)
   ]
   | length
@@ -27,9 +29,9 @@ if [[ "$covered_files" -eq 0 ]]; then
   exit 1
 fi
 
-summary="$(jq -r --arg workspace_root "$workspace_root" --arg source_root "$source_root" '
+summary="$(jq -r --arg workspace_root "$workspace_root" --arg source_root "$source_root" --arg contract_root "$contract_root" '
   .data[].files[]
-  | select(.filename | startswith($source_root))
+  | select(.filename | startswith($source_root) or startswith($contract_root))
   | select(.summary.lines.count > 0)
   | [
       (.filename | ltrimstr($workspace_root)),
@@ -58,10 +60,10 @@ fi
 
 failures="$(jq -r \
   --arg workspace_root "$workspace_root" \
-  --arg source_root "$source_root" \
+  --arg source_root "$source_root" --arg contract_root "$contract_root" \
   --argjson minimum "$minimum" '
     .data[].files[]
-    | select(.filename | startswith($source_root))
+    | select(.filename | startswith($source_root) or startswith($contract_root))
     | select(.summary.lines.count > 0)
     | select(.summary.lines.percent < $minimum)
     | "\(.filename | ltrimstr($workspace_root)): \(.summary.lines.percent)%"

@@ -244,6 +244,6 @@ protocol; callers may still supply larger bundles through existing operations.
 Typed `PreparationPath` and `PreparationLimit` errors explain
 refusals. File contents are omitted from preparation Debug output.
 
-The OpenHuman adapter is a separate followup, gated on a published compatible
+The OpenHuman adapter is a separate follow-up, gated on a published compatible
 module artifact and digest. This change does not switch host dependencies or
 release package versions.

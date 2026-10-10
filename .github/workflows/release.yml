@@ -70,8 +70,8 @@ jobs:
           set -euo pipefail
 
           metadata="$(cargo metadata --format-version 1 --no-deps)"
-          crate_name="$(jq -r '.packages[0].name' <<< "$metadata")"
-          current_version="$(jq -r '.packages[0].version' <<< "$metadata")"
+          crate_name="$(jq -r '.packages[] | select(.name == "tinyhosts") | .name' <<< "$metadata")"
+          current_version="$(jq -r '.packages[] | select(.name == "tinyhosts") | .version' <<< "$metadata")"
           if [[ -z "$crate_name" || "$crate_name" == "null" ]]; then
             echo "Could not resolve the crate name" >&2
             exit 1
@@ -141,6 +141,7 @@ jobs:
         run: |
           set -euo pipefail
           perl -0pi -e 's/(\[package\][\s\S]*?\nversion = ")[^"]+(")/$1$ENV{NEXT_VERSION}$2/' Cargo.toml crates/tinyhosts-bus/Cargo.toml
+          perl -0pi -e 's/(tinyhosts-bus = \{[^\n]*version = ")[^"]+(")/$1$ENV{NEXT_VERSION}$2/' Cargo.toml
           cargo update -p "$CRATE_NAME" --precise "$NEXT_VERSION"
 
       - name: Commit version bump and tag
