@@ -169,7 +169,7 @@ fn serialization_budget_is_charged_before_publishing_encoded_files() {
         Err(Error::PreparationLimit { .. })
     ));
     assert_eq!(out.file_count, 0);
-    assert!(out.bundle.is_empty());
+    assert_eq!(out.bundle, [] as [tinyhosts_bus::inputs::BundleFile; 0]);
     charged = 512;
     collect_file(
         &dir,
