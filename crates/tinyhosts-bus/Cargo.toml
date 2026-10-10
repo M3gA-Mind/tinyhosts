@@ -1,0 +1,19 @@
+[package]
+name = "tinyhosts-bus"
+version = "0.2.3"
+edition = "2024"
+rust-version = "1.88"
+license = "GPL-3.0-only"
+description = "Transport-free hosting vocabulary for TinyBus hosts."
+repository = "https://github.com/tinyhumansai/tinyhosts"
+
+[dependencies]
+# Contract payloads and their JSON schemas.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Shared error vocabulary; no provider, filesystem, or transport dependency.
+thiserror = "2"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"

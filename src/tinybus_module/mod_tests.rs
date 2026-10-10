@@ -34,7 +34,8 @@ fn declared_methods_match_the_dispatch_table() {
         .map(|member| member.to_string())
         .collect::<Vec<_>>();
 
-    assert_eq!(methods, ["Execute", "Providers"]);
+    assert_eq!(methods, tinyhosts_bus::METHODS);
+    assert_eq!(tinyhosts_bus::CONTRACT_VERSION, env!("CARGO_PKG_VERSION"));
 }
 
 #[tokio::test]

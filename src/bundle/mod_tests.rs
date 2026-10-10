@@ -205,3 +205,9 @@ fn a_bundle_converts_back_into_its_files() {
 
     assert_eq!(files.len(), 1);
 }
+
+#[test]
+fn windows_absolute_and_null_bundle_paths_are_refused() {
+    assert!(SiteFile::new("C:\\Windows\\credential", b"secret".to_vec()).is_err());
+    assert!(SiteFile::new("entry\0secret", b"secret".to_vec()).is_err());
+}

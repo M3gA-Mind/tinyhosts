@@ -14,8 +14,8 @@
 
 use tinybus::{Connection, Result as TinyBusResult};
 
-const INTERFACE: &str = "ai.tinyhumans.tinyhosts.Hosting";
-const OBJECT_PATH: &str = "/ai/tinyhumans/tinyhosts/Hosting";
+const INTERFACE: &str = tinyhosts_bus::BUS_NAME;
+const OBJECT_PATH: &str = tinyhosts_bus::OBJECT_PATH;
 
 struct HostingService;
 

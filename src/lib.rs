@@ -54,6 +54,7 @@ pub mod credentials;
 pub mod error;
 pub mod host;
 pub mod launch;
+pub mod preparation;
 pub mod providers;
 pub mod rpc;
 #[cfg(feature = "tools")]
@@ -82,3 +83,6 @@ pub use providers::vercel::Vercel;
 // next to each other, so they stay in their module rather than being flattened
 // into the crate root.
 pub use rpc::{execute, execute_json};
+
+/// Transport-free contract for consumers of the compiled module.
+pub use tinyhosts_bus as bus;

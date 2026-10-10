@@ -499,7 +499,7 @@ async fn reading_logs_without_a_deployment_id_is_refused_before_any_call() {
 /// Every tool's name, description, schema, permission and external-effect flag,
 /// as the `OpenHuman` host declared them before the tools moved here. A change
 /// to any of these changes a prompt, so it has to be a change to this file too.
-const DECLARATIONS: &str = include_str!("declarations.json");
+const DECLARATIONS: &str = tinyhosts_bus::TOOL_DECLARATIONS_JSON;
 
 fn declarations_of(tools: &[Box<dyn Tool>]) -> serde_json::Value {
     tools

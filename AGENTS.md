@@ -12,7 +12,7 @@ library and a TinyBus module: the `cdylib` is the same code behind a JSON method
 ```text
 src/
 ├── lib.rs              # crate docs + the entire public re-export surface
-├── error/mod.rs        # crate-wide `Error` and `Result<T>`
+├── error/mod.rs        # compatibility exports of contract `Error` and `Result<T>`
 ├── credentials/        # the API key: redacted, deserialize-only
 ├── host/               # the `Host` trait (mod.rs) and the unified vocabulary
 │   └── types.rs        #   every provider-independent type
@@ -24,6 +24,7 @@ src/
 │                       #   http.rs (status mapping), wire.rs (Vercel's shapes)
 ├── rpc/                # one JSON request in, one JSON result out
 └── tinybus_module/     # TinyBus interface, ABI exports, and integration tests
+crates/tinyhosts-bus/   # pure vocabulary, JSON envelopes and declarations
 tests/                  # integration tests against the public API only
 examples/               # runnable, compiled-in-CI usage examples
 vendor/tinybus/         # pinned TinyBus host types and module SDK
@@ -69,8 +70,10 @@ missing module. Prefer many small modules that each do one thing well over few
 broad ones.
 
 Keep public exports centralized in `src/lib.rs` so downstream users have one
-predictable surface. Put shared error variants in `src/error/mod.rs` and return
-the crate-wide `Result<T>` from fallible public APIs.
+predictable surface. Shared wire error variants live in
+`crates/tinyhosts-bus/src/error/mod.rs`; the implementation's `src/error/mod.rs`
+re-exports that vocabulary for compatibility. Return the crate-wide `Result<T>`
+from fallible public APIs.
 
 ### Provider adapters
 
@@ -91,9 +94,9 @@ runs exactly them, so a green local run should mean a green CI run.
 
 ```sh
 cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo build --all-targets --all-features
-cargo test --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo build --workspace --all-targets --all-features
+cargo test --workspace --all-features
 ```
 
 Supporting commands:
@@ -128,7 +131,8 @@ Use standard `rustfmt` output and Rust 2024 idioms. Do not hand-format around
 
 ### Errors
 
-- One crate-wide `Error` enum in `src/error/mod.rs`, built with `thiserror`.
+- One shared `Error` enum in the contract's `src/error/mod.rs`, built with
+  `thiserror` and re-exported by the implementation's error module.
 - Fallible public functions return `Result<T>`, the crate alias.
 - Add a specific variant instead of stuffing context into a string; error
   messages are lowercase, without trailing punctuation.

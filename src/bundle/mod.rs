@@ -106,7 +106,13 @@ impl SiteFile {
         let normalized = supplied.replace('\\', "/");
         let trimmed = normalized.trim().trim_start_matches("./");
 
-        let rejected = trimmed.is_empty()
+        let rejected = trimmed.contains('\0')
+            || (trimmed.as_bytes().get(1) == Some(&b':')
+                && trimmed
+                    .as_bytes()
+                    .first()
+                    .is_some_and(u8::is_ascii_alphabetic))
+            || trimmed.is_empty()
             || trimmed.starts_with('/')
             || trimmed.split('/').any(|segment| segment == "..");
         if rejected {

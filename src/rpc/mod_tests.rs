@@ -28,6 +28,39 @@ async fn run(server: &MockServer, operation: Value) -> Value {
 }
 
 #[tokio::test]
+async fn rpc_list_limits_are_bounded_before_provider_dispatch() {
+    for (requested, expected) in [(0, 1), (u32::MAX, 100), (32, 32)] {
+        let server = MockServer::start().await;
+        for (route, body) in [
+            ("/v10/projects", json!({"projects":[]})),
+            ("/v7/deployments", json!({"deployments":[]})),
+        ] {
+            Mock::given(method("GET"))
+                .and(path(route))
+                .and(wiremock::matchers::query_param(
+                    "limit",
+                    expected.to_string(),
+                ))
+                .respond_with(ResponseTemplate::new(200).set_body_json(body))
+                .expect(1)
+                .mount(&server)
+                .await;
+        }
+        run(
+            &server,
+            json!({"operation":"list_sites", "limit":requested}),
+        )
+        .await;
+        run(
+            &server,
+            json!({"operation":"list_deployments", "site":"shop", "limit":requested}),
+        )
+        .await;
+        server.verify().await;
+    }
+}
+
+#[tokio::test]
 async fn creates_a_site() {
     let server = MockServer::start().await;
     mount(
@@ -437,4 +470,158 @@ async fn a_request_without_a_credential_falls_back_to_the_environment() {
 #[test]
 fn the_available_providers_are_listed() {
     assert_eq!(providers(), ["vercel"]);
+}
+
+#[test]
+fn pure_bus_deployment_inputs_are_accepted_by_the_validated_library_envelope() {
+    let operation =
+        tinyhosts_bus::rpc::Operation::<tinyhosts_bus::inputs::LaunchInput, _>::Deploy {
+            request: Box::new(tinyhosts_bus::inputs::DeploymentInput {
+                site: "site".into(),
+                framework: crate::Framework::Static,
+                target: crate::DeploymentTarget::Preview,
+                bundle: vec![tinyhosts_bus::inputs::BundleFile {
+                    path: "index.html".into(),
+                    contents: "SGVsbG8=".into(),
+                }],
+            }),
+        };
+    let request: Request =
+        serde_json::from_value(serde_json::to_value(operation).unwrap()).unwrap();
+    match request.operation {
+        Operation::Deploy { request } => {
+            assert!(request.validate().is_ok());
+            assert_eq!(request.bundle.files()[0].contents(), b"Hello");
+        }
+        _ => panic!("expected a deployment"),
+    }
+    let invalid = serde_json::json!({"operation":"deploy", "request": {
+        "site":"site", "bundle":[{"path":"../private", "contents":"SGVsbG8="}]
+    }});
+    assert!(serde_json::from_value::<Request>(invalid).is_err());
+}
+
+#[tokio::test]
+async fn contract_log_and_missing_site_results_keep_their_tagged_envelopes() {
+    let server = MockServer::start().await;
+    mount(
+        &server,
+        "GET",
+        "/v3/deployments/deploy/events",
+        200,
+        json!([]),
+    )
+    .await;
+    let logs = run(
+        &server,
+        json!({"operation":"deployment_logs", "id":"deploy"}),
+    )
+    .await;
+    assert_eq!(logs, json!({"result":"deployment_logs", "value":[]}));
+    mount(
+        &server,
+        "GET",
+        "/v9/projects/missing",
+        404,
+        json!({"error":{"code":"not_found"}}),
+    )
+    .await;
+    let site = run(&server, json!({"operation":"find_site", "site":"missing"})).await;
+    assert_eq!(site, json!({"result":"no_site"}));
+}
+
+#[tokio::test]
+async fn authorized_directory_preparation_uses_execute_without_provider_or_credentials() {
+    let directory = tempfile::tempdir().unwrap();
+    std::fs::write(directory.path().join("index.html"), "Hello").unwrap();
+    let response = execute_json(
+        &json!({
+            "operation":"prepare_bundle",
+            "directory":{"workspace":directory.path().to_string_lossy(),"path":"."}
+        })
+        .to_string(),
+    )
+    .await
+    .unwrap();
+    let outcome: Value = serde_json::from_str(&response).unwrap();
+    assert_eq!(outcome["result"], "prepared_bundle");
+    assert_eq!(outcome["value"]["contract_version"], json!([1, 1]));
+    assert_eq!(outcome["value"]["bundle"][0]["contents"], "SGVsbG8=");
+    assert_eq!(outcome["value"]["total_bytes"], 5);
+}
+
+#[tokio::test]
+async fn supplied_deployment_credential_files_are_refused_before_provider_dispatch() {
+    let server = MockServer::start().await;
+    mount(
+        &server,
+        "POST",
+        "/v13/deployments",
+        200,
+        json!({"id":"unexpected"}),
+    )
+    .await;
+    let response = execute_json(&json!({
+        "credentials":{"api_key":"fixture"},"base_url":server.uri(),
+        "operation":"deploy","request":{"site":"site","bundle":[{"path":".ssh/id_rsa","contents":"c2VjcmV0"}]}
+    }).to_string()).await;
+    assert!(matches!(response, Err(Error::CredentialBundlePath { .. })));
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn supplied_launch_credential_files_are_refused_before_site_lookup() {
+    let server = MockServer::start().await;
+    let request = json!({ "operation":"launch", "credentials":{"api_key":"fixture"}, "base_url":server.uri(),
+        "plan":{"site":{"name":"shop"},"bundle":[{"path":"app/.env.local","contents":"c2VjcmV0"}]}});
+    assert!(matches!(
+        execute_json(&request.to_string()).await,
+        Err(Error::CredentialBundlePath { .. })
+    ));
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn legacy_launch_and_deploy_accept_large_bundles_within_transport_budget() {
+    use base64::Engine as _;
+    let server = MockServer::start().await;
+    let source = vec![b'x'; 6 * 1024 * 1024];
+    Mock::given(method("POST"))
+        .and(path("/v2/files"))
+        .and(wiremock::matchers::body_bytes(source.clone()))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .expect(2)
+        .mount(&server)
+        .await;
+    mount(
+        &server,
+        "GET",
+        "/v9/projects/shop",
+        200,
+        json!({"id":"site","name":"shop"}),
+    )
+    .await;
+    mount(
+        &server,
+        "POST",
+        "/v13/deployments",
+        200,
+        json!({"id":"large-deploy","readyState":"READY"}),
+    )
+    .await;
+    let bundle = json!([{"path":"index.html", "contents":base64::engine::general_purpose::STANDARD.encode(source)}]);
+    for operation in [
+        json!({"operation":"deploy", "request":{"site":"shop", "bundle":bundle}}),
+        json!({"operation":"launch", "plan":{"site":{"name":"shop"}, "bundle":bundle}}),
+    ] {
+        let mut request = operation;
+        request["credentials"] = json!({"api_key":"fixture"});
+        request["base_url"] = json!(server.uri());
+        let request = request.to_string();
+        assert!(request.len() > 7 * 1024 * 1024);
+        assert!(serde_json::to_vec(&request).unwrap().len() < 16 * 1024 * 1024 - 1024);
+        let result = execute_json(&request).await.unwrap();
+        assert!(result.contains("large-deploy"));
+    }
+    server.verify().await;
 }
