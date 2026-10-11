@@ -71,7 +71,8 @@ fn release_resolver_accepts_windows_line_endings() -> Result<(), Box<dyn std::er
 }
 
 #[test]
-fn release_accepts_prerelease_and_build_metadata_together() -> Result<(), Box<dyn std::error::Error>> {
+fn release_accepts_prerelease_and_build_metadata_together() -> Result<(), Box<dyn std::error::Error>>
+{
     for tag in ["v1.2.3+build.5", "v1.2.3-beta.1+build.5"] {
         assert!(resolve(tag)?.status.success());
     }

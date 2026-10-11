@@ -170,6 +170,11 @@ fn excluded(name: &str) -> bool {
     crate::EXCLUDED.contains(&name) || name.starts_with(".env.") || credential_entry(name)
 }
 
+fn source_name(name: std::ffi::OsString) -> Result<String> {
+    name.into_string()
+        .map_err(|_| invalid("non-UTF-8 source name"))
+}
+
 fn collect(
     dir: &Dir,
     prefix: &str,
@@ -188,10 +193,7 @@ fn collect(
         }
         out.scanned_entries += 1;
         let entry = entry.map_err(|error| read_error(prefix, &error))?;
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| invalid("non-UTF-8 source name"))?;
+        let name = source_name(entry.file_name())?;
         let path = if prefix.is_empty() {
             name.clone()
         } else {
