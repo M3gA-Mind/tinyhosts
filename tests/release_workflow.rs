@@ -22,14 +22,30 @@ fn resolver_body(workflow: &str) -> Result<String, Box<dyn std::error::Error>> {
 }
 
 fn run_resolver(tag: &str, body: &str) -> Result<std::process::Output, Box<dyn std::error::Error>> {
-    let output = tempfile::NamedTempFile::new()?;
-    let result = Command::new("bash")
+    let output = tempfile::NamedTempFile::new()?.into_temp_path();
+    // Windows also ships a WSL bash launcher; use the shell installed with Git.
+    #[cfg(windows)]
+    let bash = {
+        let git = Command::new("git").arg("--exec-path").output()?;
+        if !git.status.success() {
+            return Err("cannot locate Git Bash".into());
+        }
+        let exec_path = std::path::PathBuf::from(String::from_utf8(git.stdout)?.trim());
+        exec_path
+            .ancestors()
+            .nth(3)
+            .ok_or("invalid Git installation path")?
+            .join("bin/bash.exe")
+    };
+    #[cfg(not(windows))]
+    let bash = std::path::PathBuf::from("bash");
+    let result = Command::new(bash)
         .args(["-c", body])
         .env("TAG", tag)
-        .env("GITHUB_OUTPUT", output.path())
+        .env("GITHUB_OUTPUT", output.to_string_lossy().replace('\\', "/"))
         .output()?;
     if result.status.success() {
-        let values = std::fs::read_to_string(output.path())?;
+        let values = std::fs::read_to_string(&output)?;
         assert_eq!(values, format!("tag={tag}\nversion={}\n", &tag[1..]));
     }
     Ok(result)
@@ -39,7 +55,12 @@ fn run_resolver(tag: &str, body: &str) -> Result<std::process::Output, Box<dyn s
 fn reviewed_version_tags_resolve_without_modifying_the_workspace()
 -> Result<(), Box<dyn std::error::Error>> {
     for tag in ["v0.3.0", "v1.0.0", "v1.0.0-beta.1"] {
-        assert!(resolve(tag)?.status.success());
+        let result = resolve(tag)?;
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
     }
     assert!(!RELEASE.contains("git push"));
     assert!(!RELEASE.contains("perl -0pi"));
@@ -66,7 +87,12 @@ fn the_caller_selects_the_host_module_and_canonical_release_pipeline() {
 fn release_resolver_accepts_windows_line_endings() -> Result<(), Box<dyn std::error::Error>> {
     let workflow = RELEASE.replace("\r\n", "\n").replace('\n', "\r\n");
     let body = resolver_body(&workflow)?;
-    assert!(run_resolver("v1.2.3", &body)?.status.success());
+    let result = run_resolver("v1.2.3", &body)?;
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
     Ok(())
 }
 
@@ -74,7 +100,12 @@ fn release_resolver_accepts_windows_line_endings() -> Result<(), Box<dyn std::er
 fn release_accepts_prerelease_and_build_metadata_together() -> Result<(), Box<dyn std::error::Error>>
 {
     for tag in ["v1.2.3+build.5", "v1.2.3-beta.1+build.5"] {
-        assert!(resolve(tag)?.status.success());
+        let result = resolve(tag)?;
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
     }
     Ok(())
 }
