@@ -64,7 +64,7 @@ fn the_caller_selects_the_host_module_and_canonical_release_pipeline() {
 
 #[test]
 fn release_resolver_accepts_windows_line_endings() -> Result<(), Box<dyn std::error::Error>> {
-    let workflow = RELEASE.replace("\r\n", "\n").replace("\n", "\r\n");
+    let workflow = RELEASE.replace("\r\n", "\n").replace('\n', "\r\n");
     let body = resolver_body(&workflow)?;
     assert!(run_resolver("v1.2.3", &body)?.status.success());
     Ok(())
