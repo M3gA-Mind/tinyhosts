@@ -537,7 +537,7 @@ async fn authorized_directory_preparation_uses_execute_without_provider_or_crede
     let response = execute_json(
         &json!({
             "operation":"prepare_bundle",
-            "directory":{"workspace":directory.path().to_string_lossy(),"path":"."}
+            "directory":{"workspace":directory.path().canonicalize().unwrap().to_string_lossy(),"path":"."}
         })
         .to_string(),
     )

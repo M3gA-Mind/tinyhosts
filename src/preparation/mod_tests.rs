@@ -5,7 +5,7 @@ use super::*;
 
 fn input(root: &Path) -> AuthorizedDirectory {
     AuthorizedDirectory {
-        workspace: root.to_string_lossy().into(),
+        workspace: root.canonicalize().unwrap().to_string_lossy().into(),
         path: ".".into(),
         max_bytes: MAX_PREPARATION_BYTES,
         max_files: MAX_PREPARATION_FILES,

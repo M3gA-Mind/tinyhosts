@@ -170,18 +170,19 @@ the suite is offline, deterministic, and needs no token.
 
 ## Releasing
 
-Run the **Release** workflow from the Actions tab with a `patch`, `minor`, or
-`major` bump. Use `current` only to resume an interrupted release whose version
-commit and tag already exist. The workflow revalidates the crate, versions and
-tags it, builds this crate as a TinyBus `cdylib`, and creates a GitHub release.
-Assets follow `tinyhosts-<version>-<platform>.<tar.gz|zip>` and contain the
-native module, its SHA-256 `modules.toml`, license, and
-[`MODULE.md`](MODULE.md). Every release also publishes `checksum.toml`, which
-TinyBus uses to verify an archive before extraction. The workflow loads the
-published Ubuntu archive through TinyBus's GitHub release API and calls its
-`Providers` method before declaring the release successful. TinyBus itself is not
-shipped by this repository; the pinned submodule is the build-time SDK. Do not
-hand-edit the version in `Cargo.toml`.
+Update the workspace versions, local dependency constraints, and lockfile in a
+reviewed pull request. After it merges to `main`, create the matching `v<version>`
+tag on that commit. The **Release** workflow runs on the tag; its manual input
+accepts an existing tag when retrying a release.
+
+The shared release workflow builds and verifies 17 native archives across
+Linux, macOS, and Windows. Assets follow
+`tinyhosts-<version>-<platform>.<tar.gz|zip>` and contain the native module,
+its SHA-256 `modules.toml`, license, and [`MODULE.md`](MODULE.md).
+`checksum.toml` records the archive hashes. Verification loads each native module
+through TinyBus and calls `Providers` before publishing the immutable release.
+
+TinyBus itself is not shipped here; the pinned submodule is the build-time SDK.
 
 ## Documentation
 
