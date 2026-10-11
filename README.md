@@ -175,7 +175,7 @@ reviewed pull request. After it merges to `main`, create the matching `v<version
 tag on that commit. The **Release** workflow runs on the tag; its manual input
 accepts an existing tag when retrying a release.
 
-The shared release workflow builds and verifies 17 native archives across
+The shared release workflow builds and verifies 17 native and distro archives across
 Linux, macOS, and Windows. Assets follow
 `tinyhosts-<version>-<platform>.<tar.gz|zip>` and contain the native module,
 its SHA-256 `modules.toml`, license, and [`MODULE.md`](MODULE.md).
