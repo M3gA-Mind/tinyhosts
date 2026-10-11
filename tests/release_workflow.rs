@@ -4,7 +4,12 @@ use std::process::Command;
 const RELEASE: &str = include_str!("../.github/workflows/release.yml");
 
 fn resolve(tag: &str) -> Result<std::process::Output, Box<dyn std::error::Error>> {
-    let body = RELEASE
+    let body = resolver_body(RELEASE)?;
+    run_resolver(tag, &body)
+}
+
+fn resolver_body(workflow: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let body = workflow
         .split("        run: |\n")
         .nth(1)
         .ok_or("missing release resolver")?
@@ -13,9 +18,13 @@ fn resolve(tag: &str) -> Result<std::process::Output, Box<dyn std::error::Error>
         .map(|line| &line[10..])
         .collect::<Vec<_>>()
         .join("\n");
+    Ok(body)
+}
+
+fn run_resolver(tag: &str, body: &str) -> Result<std::process::Output, Box<dyn std::error::Error>> {
     let output = tempfile::NamedTempFile::new()?;
     let result = Command::new("bash")
-        .args(["-c", &body])
+        .args(["-c", body])
         .env("TAG", tag)
         .env("GITHUB_OUTPUT", output.path())
         .output()?;
@@ -51,4 +60,20 @@ fn the_caller_selects_the_host_module_and_canonical_release_pipeline() {
     assert!(RELEASE.contains("tinyhumansai/.github/.github/workflows/module-release.yml@"));
     assert!(!RELEASE.contains("native-bundles:"));
     assert!(!RELEASE.contains("include-distros: false"));
+}
+
+#[test]
+fn release_resolver_accepts_windows_line_endings() -> Result<(), Box<dyn std::error::Error>> {
+    let workflow = RELEASE.replace("\n", "\r\n");
+    let body = resolver_body(&workflow)?;
+    assert!(run_resolver("v1.2.3", &body)?.status.success());
+    Ok(())
+}
+
+#[test]
+fn release_accepts_prerelease_and_build_metadata_together() -> Result<(), Box<dyn std::error::Error>> {
+    for tag in ["v1.2.3+build.5", "v1.2.3-beta.1+build.5"] {
+        assert!(resolve(tag)?.status.success());
+    }
+    Ok(())
 }
