@@ -26,7 +26,9 @@ fn archive_library_is_rejected_before_loading_when_its_manifest_digest_differs()
     // fixture is deliberately not a library: reaching the native loader would
     // produce a different error, proving the allowlist gate ran too late.
     let host = ModuleHost::new(Broker::new());
-    let error = host.load_file(&library).unwrap_err();
+    let Err(error) = host.load_file(&library) else {
+        return Err("modified library was accepted".into());
+    };
     assert!(
         matches!(
             &error,
