@@ -13,11 +13,14 @@ fn archive_library_is_rejected_before_loading_when_its_manifest_digest_differs()
     } else {
         "libtinyhosts.so"
     };
-    let library = directory.path().join(library_name);
+    // macOS temporary paths can traverse /var, a symlink to /private/var.
+    // The loader requires a path with no symlink components.
+    let directory_path = directory.path().canonicalize()?;
+    let library = directory_path.join(library_name);
     std::fs::write(&library, b"original library bytes")?;
     let digest = tinybus::module::sha256_file(&library)?;
     std::fs::write(
-        directory.path().join("modules.toml"),
+        directory_path.join("modules.toml"),
         format!("\"{library_name}\" = \"{digest}\"\n"),
     )?;
     std::fs::write(&library, b"modified library bytes")?;
