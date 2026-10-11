@@ -9,11 +9,11 @@ fn resolve(tag: &str) -> Result<std::process::Output, Box<dyn std::error::Error>
 }
 
 fn resolver_body(workflow: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let body = workflow
-        .split("        run: |\n")
-        .nth(1)
-        .ok_or("missing release resolver")?
-        .lines()
+    let mut lines = workflow.lines();
+    lines
+        .find(|line| *line == "        run: |")
+        .ok_or("missing release resolver")?;
+    let body = lines
         .take_while(|line| line.starts_with("          "))
         .map(|line| &line[10..])
         .collect::<Vec<_>>()
