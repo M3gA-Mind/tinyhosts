@@ -21,3 +21,15 @@ local mock of the provider API, and `examples/verify_module.rs` loads a compiled
 
 This module is handed live hosting credentials by its callers. It must not log a
 request, cache one, or retain Rust-owned data across the ABI boundary.
+
+## Static linking (`static-link`)
+
+With `--features static-link` the module exports `tinyhosts::linked_module()`
+and Rust-addressable entry points instead of the C `TINYBUS_MODULE_ABI_V1`
+symbols, so it can sit beside other modules in one executable. This is for
+local development and tests; shipped builds load the release `cdylib`.
+
+Process-global audit: the crate holds no `OnceLock`/`static` runtime or cache.
+Credentials are read from the environment per request (`Credentials::from_env`),
+so co-linked modules share only the process environment, which is read-only
+here.
