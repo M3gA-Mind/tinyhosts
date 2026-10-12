@@ -99,3 +99,25 @@ async fn a_failed_request_becomes_a_bus_error_carrying_the_reason() -> tinybus::
     );
     Ok(())
 }
+
+#[cfg(feature = "static-link")]
+#[tokio::test]
+async fn linked_module_is_admitted_by_the_module_host() {
+    use tinybus::module::ModuleHost;
+
+    let bus = MemoryBus::new();
+    let broker = Broker::new();
+    let broker_task = broker.spawn(bus);
+    let host = ModuleHost::new(broker);
+
+    let linked = super::linked_module().expect("linked module builds");
+    assert_eq!(linked.manifest.bus_name.as_str(), INTERFACE);
+
+    let info = host
+        .attach_linked_with_config(linked, json!({}))
+        .expect("linked module is admitted");
+
+    assert_eq!(info.manifest.bus_name.as_str(), INTERFACE);
+    assert_eq!(host.list().len(), 1);
+    broker_task.abort();
+}

@@ -44,7 +44,10 @@ async fn setup(connection: Connection) -> TinyBusResult<()> {
     Ok(())
 }
 
-tinybus_module::module_export! {
+// Under the `static-link` feature this exports Rust-addressable entry points
+// and `linked_module()` instead of the C ABI symbols, so several modules can
+// share one executable. Default builds keep the C exports for the cdylib.
+tinybus_module::module_export_optional_static! {
     setup = setup,
     worker_threads = 2,
     provides = ["ai.tinyhumans.tinyhosts.Hosting"],

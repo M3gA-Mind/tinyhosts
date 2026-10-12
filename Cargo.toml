@@ -116,6 +116,11 @@ vercel = ["dep:reqwest", "dep:sha1", "dep:hex", "dep:percent-encoding"]
 # That is not only a smaller graph: OpenHuman vendors its own TinyBus, and two
 # path copies of one package cannot both be written to a lockfile.
 module = ["dep:tinybus", "dep:tinybus-module"]
+# Export `linked_module()` and Rust-addressable entry points instead of the C
+# ABI symbols, so this module can be linked beside others in one executable
+# (no duplicate `TINYBUS_MODULE_ABI_V1`). Local development and tests only;
+# shipped builds load the release `cdylib`.
+static-link = ["module", "tinybus-module/static-link"]
 # The ten `hosting_*` agent tools as `tinytools::Tool`s over a `Host`
 # (`tinyhosts::tools`). Off by default so the loadable module does not link the
 # tool vocabulary; provider-independent, so it needs no `vercel`.

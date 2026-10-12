@@ -63,6 +63,11 @@ pub mod tools;
 #[cfg(feature = "module")]
 mod tinybus_module;
 
+/// The in-process entry for hosts that link this module instead of loading the
+/// `cdylib` (local development and tests only).
+#[cfg(all(feature = "module", feature = "static-link"))]
+pub use tinybus_module::linked_module;
+
 pub use bundle::{Bundle, EXCLUDED, SiteFile};
 pub use credentials::Credentials;
 pub use error::{Error, Result};
