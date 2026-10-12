@@ -52,6 +52,7 @@ class PackageTests(unittest.TestCase):
         target = ROOT / "target"; target.mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=target) as directory:
             root = Path(directory); bin_dir = root/"bin"; bin_dir.mkdir()
+            (bin_dir/"bash").symlink_to(shutil.which("bash"))
             pacman = bin_dir/"pacman"
             pacman.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$PACMAN_ARGS\"\n")
             pacman.chmod(0o755)
