@@ -1,5 +1,6 @@
 """Verify the shipped module archive layout without compiling native code."""
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
