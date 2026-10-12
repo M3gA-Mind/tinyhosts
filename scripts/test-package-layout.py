@@ -63,7 +63,7 @@ class PackageTests(unittest.TestCase):
             args = (root/"pacman-args").read_text().splitlines()
             self.assertEqual(args, ["-Syu", "--disable-sandbox-filesystem", "--noconfirm",
                                     "base-devel", "cmake", "curl", "git", "gzip", "jq",
-                                    "openssl", "perl", "util-linux"])
+                                    "openssl", "perl"])
             self.assertNotIn("--disable-sandbox", args)
 
     def test_archive_attests_host_library_bytes_from_a_symlinked_checkout(self):
