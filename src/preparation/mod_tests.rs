@@ -5,7 +5,7 @@ use super::*;
 
 fn input(root: &Path) -> AuthorizedDirectory {
     AuthorizedDirectory {
-        workspace: root.to_string_lossy().into(),
+        workspace: root.canonicalize().unwrap().to_string_lossy().into(),
         path: ".".into(),
         max_bytes: MAX_PREPARATION_BYTES,
         max_files: MAX_PREPARATION_FILES,
@@ -165,12 +165,15 @@ fn workspace_symlink_is_refused_before_reading_credential_contents() {
 #[test]
 fn long_relative_paths_are_refused_before_collection() {
     let root = tempfile::tempdir().unwrap();
-    let mut path = root.path().to_path_buf();
+    // Directory handles avoid the host's absolute path limit while constructing
+    // a relative path beyond the preparation budget.
+    let mut dir = Dir::open_ambient_dir(root.path(), cap_std::ambient_authority()).unwrap();
     for _ in 0..6 {
-        path.push("x".repeat(200));
-        std::fs::create_dir(&path).unwrap();
+        let name = "x".repeat(200);
+        dir.create_dir(&name).unwrap();
+        dir = dir.open_dir(&name).unwrap();
     }
-    std::fs::write(path.join("file"), "data").unwrap();
+    dir.write("file", "data").unwrap();
     assert!(matches!(
         prepare_bundle(&input(root.path())),
         Err(Error::PreparationLimit { .. })
@@ -244,7 +247,8 @@ fn serialization_budget_is_charged_before_publishing_encoded_files() {
     );
 }
 
-#[cfg(unix)]
+// Linux filesystems accept arbitrary filename bytes; macOS APFS rejects them.
+#[cfg(target_os = "linux")]
 #[test]
 fn non_utf8_names_are_refused_without_lossy_path_rewriting() {
     use std::os::unix::ffi::OsStringExt;
@@ -326,4 +330,15 @@ fn credential_refusal_is_distinct_from_malformed_bundle_paths_without_exposing_p
         assert_eq!(error.to_string(), "bundle contains credential material");
         assert!(!format!("{error:?}").contains(path));
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn source_name_rejects_non_utf8_without_rewriting_bytes() {
+    use std::os::unix::ffi::OsStringExt;
+    assert!(matches!(
+        source_name(std::ffi::OsString::from_vec(vec![255])),
+        Err(Error::PreparationPath { .. })
+    ));
+    assert_eq!(source_name("index.html".into()).unwrap(), "index.html");
 }

@@ -27,7 +27,7 @@ CI also requires at least 90% line coverage in every source file. After
 installing `cargo-llvm-cov`, run the same gate locally:
 
 ```sh
-.github/scripts/check-file-coverage.sh 90 target/coverage.json
+scripts/check-coverage.sh
 ```
 
 The bundled example should also run:
@@ -68,7 +68,7 @@ regardless.
 - [ ] `cargo clippy --all-targets --all-features -- -D warnings`
 - [ ] `cargo build --all-targets --all-features`
 - [ ] `cargo test --all-features`
-- [ ] `.github/scripts/check-file-coverage.sh 90 target/coverage.json`
+- [ ] `scripts/check-coverage.sh`
 - [ ] tests added or updated for behavior changes
 - [ ] documentation updated for public API, architecture, or usage changes
 - [ ] the pull request is focused on one logical change
@@ -100,3 +100,7 @@ shape they imply.
 
 Do not report vulnerabilities through public issues. Follow the process in
 [SECURITY.md](SECURITY.md).
+
+## Releasing
+
+Change the Cargo package versions through a reviewed PR. After it merges, tag that commit as vX.Y.Z and push the tag, or dispatch Release with an existing version tag. The shared release verifies the package version, builds and loads all 17 native and distro artifacts, and publishes their checksum manifest. Release does not push version bumps to main.
