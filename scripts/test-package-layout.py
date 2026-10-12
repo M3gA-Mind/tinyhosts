@@ -21,7 +21,10 @@ class PackageTests(unittest.TestCase):
             root = Path(directory); bin_dir = root/"bin"; home = root/"home"
             bin_dir.mkdir(); home.mkdir()
             cargo = bin_dir/"cargo"
-            cargo.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$VERIFY_ARGS\"\n")
+            cargo.write_text("#!/usr/bin/env python3\nimport json,os,sys\nfrom pathlib import Path\n"
+                             "library=Path(sys.argv[-1])\n"
+                             "Path(os.environ['VERIFY_ARGS']).write_text(json.dumps({"
+                             "'library':str(library),'mode':library.parent.stat().st_mode & 0o777}))\n")
             cargo.chmod(0o755)
             archive = root/"module.tar.gz"
             with tarfile.open(archive, "w:gz") as package:
@@ -33,11 +36,11 @@ class PackageTests(unittest.TestCase):
             result = subprocess.run([str(ROOT/"scripts/verify-module.sh"), "--archive", str(archive)],
                                     cwd=ROOT, env=env, text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            args = (root/"verify-args").read_text().splitlines()
-            library = Path(args[-1])
+            verified = json.loads((root/"verify-args").read_text())
+            library = Path(verified["library"])
             self.assertEqual(library.name, "libtinyhosts.so")
             self.assertTrue(library.is_relative_to(home), library)
-            self.assertEqual(library.parent.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(verified["mode"], 0o700)
 
     def test_archive_accepts_dotted_release_host_key_and_attests_library(self):
         """Package an Ubuntu matrix host key containing dots."""
