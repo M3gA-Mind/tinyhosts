@@ -5,6 +5,7 @@ mod launch;
 pub mod model;
 pub mod preparation;
 pub mod rpc;
+pub mod tools;
 pub use error::{Error, Result};
 pub use launch::Launch;
 pub use model::*;
@@ -15,8 +16,8 @@ pub const OBJECT_PATH: &str = "/ai/tinyhumans/tinyhosts/Hosting";
 /// Member names in their existing order and arity.
 pub const METHODS: [&str; 2] = ["Execute", "Providers"];
 /// Additive hosting operation vocabulary, independent of artifact package releases.
-/// 1.0 is the original Execute/Providers surface; 1.1 adds authorized preparation.
-pub const WIRE_CONTRACT_VERSION: (u32, u32) = (1, 1);
+/// 1.0 is the original Execute/Providers surface; 1.1 adds authorized preparation; 1.2 adds the pure tool-argument and rendering helpers in `tools`.
+pub const WIRE_CONTRACT_VERSION: (u32, u32) = (1, 2);
 
 /// Whether an artifact serves every operation in this vocabulary.
 #[must_use]

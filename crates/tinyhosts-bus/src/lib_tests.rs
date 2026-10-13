@@ -106,11 +106,12 @@ fn authorized_preparation_is_additive_versioned_and_not_a_model_tool() {
     };
     assert_eq!(directory.max_bytes, preparation::MAX_PREPARATION_BYTES);
     assert_eq!(directory.max_files, preparation::MAX_PREPARATION_FILES);
-    assert!(is_compatible((1, 1)));
+    assert!(!is_compatible((1, 1)));
     assert!(is_compatible((1, 2)));
+    assert!(is_compatible((1, 3)));
     assert!(!is_compatible((1, 0)));
     assert!(!is_compatible((2, 1)));
-    assert_eq!(WIRE_CONTRACT_VERSION, (1, 1));
+    assert_eq!(WIRE_CONTRACT_VERSION, (1, 2));
     assert!(!TOOL_DECLARATIONS_JSON.contains("prepare_bundle"));
     assert!(
         serde_json::from_value::<preparation::AuthorizedDirectory>(

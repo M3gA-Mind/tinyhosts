@@ -186,7 +186,7 @@ fn serialization_budget_is_charged_before_publishing_encoded_files() {
     std::fs::write(root.path().join("file"), "data").unwrap();
     let dir = Dir::open_ambient_dir(root.path(), cap_std::ambient_authority()).unwrap();
     let mut out = PreparedBundle {
-        contract_version: (1, 1),
+        contract_version: (1, 2),
         bundle: vec![],
         file_count: 0,
         total_bytes: 0,
@@ -302,7 +302,7 @@ fn source_replaced_by_fifo_is_refused_without_waiting_for_writer() {
     let dir = Dir::open_ambient_dir(root.path(), cap_std::ambient_authority()).unwrap();
     let worker = std::thread::spawn(move || {
         let mut out = PreparedBundle {
-            contract_version: (1, 1),
+            contract_version: (1, 2),
             bundle: vec![],
             file_count: 0,
             total_bytes: 0,

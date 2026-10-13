@@ -545,7 +545,7 @@ async fn authorized_directory_preparation_uses_execute_without_provider_or_crede
     .unwrap();
     let outcome: Value = serde_json::from_str(&response).unwrap();
     assert_eq!(outcome["result"], "prepared_bundle");
-    assert_eq!(outcome["value"]["contract_version"], json!([1, 1]));
+    assert_eq!(outcome["value"]["contract_version"], json!([1, 2]));
     assert_eq!(outcome["value"]["bundle"][0]["contents"], "SGVsbG8=");
     assert_eq!(outcome["value"]["total_bytes"], 5);
 }

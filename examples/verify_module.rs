@@ -121,7 +121,9 @@ async fn verify_preparation(
     let tinyhosts_bus::rpc::Outcome::PreparedBundle(snapshot) = prepared else {
         return Err(io::Error::other("missing prepared snapshot").into());
     };
-    if snapshot.contract_version != (1, 1) || snapshot.total_bytes != 5 {
+    if snapshot.contract_version != tinyhosts_bus::WIRE_CONTRACT_VERSION
+        || snapshot.total_bytes != 5
+    {
         return Err(io::Error::other("incorrect preparation facts").into());
     }
     std::fs::write(
