@@ -1,6 +1,6 @@
 [package]
 name = "tinyhosts"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 rust-version = "1.88"
 license = "GPL-3.0-only"
@@ -33,7 +33,7 @@ exclude = ["vendor/tinybus"]
 
 [dependencies]
 # Pure vocabulary shared with dynamically loaded module consumers.
-tinyhosts-bus = { path = "crates/tinyhosts-bus", version = "0.4.0" }
+tinyhosts-bus = { path = "crates/tinyhosts-bus", version = "0.4.1" }
 # TinyBus defines the message types, interface macro, and frozen module ABI used
 # by the generated integration. Socket and CLI features are unnecessary here.
 tinybus = { version = ">=0.1.3, <0.2", default-features = false, features = ["macros", "modules"], optional = true }
