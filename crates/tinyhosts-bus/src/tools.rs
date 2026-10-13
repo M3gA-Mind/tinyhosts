@@ -4,13 +4,13 @@
 //! Hosts keep workspace policy, approvals and the call itself; everything that
 //! only depends on the declared tool name, its JSON arguments and the typed
 //! outcome lives here so every host shapes and renders them identically.
+use crate::Launch;
 use crate::inputs::{BundleFile, LaunchInput};
 use crate::model::{
     AnalyticsDimension, AnalyticsQuery, DatabaseKind, DatabaseSpec, Deployment, DeploymentLog,
     DeploymentStatus, DeploymentTarget, Domain, EnvVar, SiteSpec,
 };
 use crate::rpc::{Operation, Outcome};
-use crate::Launch;
 use serde_json::Value;
 use std::fmt;
 
@@ -206,24 +206,18 @@ impl Operation {
             Some(values) => env_vars(values, &[], false)?,
             None => Vec::new(),
         };
+        let kind = match args.get("database_kind").and_then(Value::as_str) {
+            None => DatabaseKind::default(),
+            Some(kind) => serde_json::from_value::<DatabaseKind>(Value::String(kind.to_owned()))
+                .map_err(|_| ToolArgsError(format!("`database_kind` `{kind}` is not supported")))?,
+        };
         let database = args
             .get("database")
             .and_then(Value::as_str)
             .map(str::trim)
             .filter(|name| !name.is_empty())
             .map(|name| {
-                let kind = args
-                    .get("database_kind")
-                    .and_then(Value::as_str)
-                    .and_then(|kind| {
-                        serde_json::from_value::<DatabaseKind>(Value::String(kind.to_owned())).ok()
-                    })
-                    .unwrap_or_default();
-                let mut spec = DatabaseSpec {
-                    name: name.to_owned(),
-                    kind,
-                    product: None,
-                };
+                let mut spec = DatabaseSpec::new(name);
                 spec.kind = kind;
                 spec
             });
