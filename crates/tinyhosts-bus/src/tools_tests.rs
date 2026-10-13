@@ -187,3 +187,107 @@ fn small_renderers_keep_their_wording() {
     assert_eq!(bounded(&json!({"n": -5}), "n", 7, 1, 10), 1);
     assert_eq!(bounded(&json!({}), "n", 7, 1, 10), 7);
 }
+
+#[test]
+fn deployment_and_domain_tools_map_and_match_their_outcomes() {
+    let cases: Vec<(&str, Value, Outcome)> = vec![
+        (
+            "hosting_deployment_status",
+            json!({"deployment_id": "d"}),
+            Outcome::Deployment(deployment(DeploymentStatus::Ready)),
+        ),
+        (
+            TOOL_DEPLOYMENT_LOGS,
+            json!({"deployment_id": "d"}),
+            Outcome::DeploymentLogs(vec![]),
+        ),
+        (
+            TOOL_ROLLBACK,
+            json!({"deployment_id": "d"}),
+            Outcome::Deployment(deployment(DeploymentStatus::Ready)),
+        ),
+        (
+            "hosting_list_deployments",
+            json!({"site": "s"}),
+            Outcome::Deployments(vec![]),
+        ),
+        ("hosting_list_sites", json!({}), Outcome::Sites(vec![])),
+        (
+            "hosting_add_domain",
+            json!({"site": "s", "domain": "a.example"}),
+            Outcome::Domain(Domain {
+                name: "a.example".into(),
+                site: "s".into(),
+                verified: true,
+            }),
+        ),
+        (
+            "hosting_domain_status",
+            json!({"site": "s"}),
+            Outcome::Domains(vec![]),
+        ),
+        (
+            "hosting_set_env",
+            json!({"site": "s", "env": {"A": "1"}}),
+            Outcome::Done,
+        ),
+    ];
+    for (name, args, outcome) in cases {
+        let operation = op(name, args).expect(name);
+        assert!(outcome.matches(&operation), "{name}");
+        assert!(!Outcome::NoSite.matches(&operation), "{name}");
+    }
+    let find = op("hosting_find_site", json!({"site": "s"}));
+    if let Ok(find) = find {
+        assert!(Outcome::NoSite.matches(&find));
+    }
+    let list_env = op("hosting_list_env", json!({"site": "s"}));
+    if let Ok(list_env) = list_env {
+        assert!(Outcome::Env(vec![]).matches(&list_env));
+    }
+}
+
+#[test]
+fn unsupported_inputs_are_tool_args_errors() {
+    let err = op("hosting_set_env", json!({"site": "s", "env": 3})).unwrap_err();
+    assert!(err.to_string().contains("env"));
+    assert!(op("hosting_nope", json!({})).is_err());
+    let bad =
+        Operation::launch_from_tool_args(&json!({"site": "s", "database_kind": "zzz"}), vec![]);
+    assert!(bad.is_err());
+    let missing = Operation::promote_from_tool_args(&json!({}));
+    assert!(missing.is_err());
+}
+
+#[test]
+fn rollback_summary_and_domain_summary_cover_each_branch() {
+    let mut d = deployment(DeploymentStatus::Ready);
+    assert!(rollback_summary("s", "dpl_1", &d).contains("(https://demo.example)"));
+    d.url = None;
+    assert!(!rollback_summary("s", "dpl_1", &d).contains("(http"));
+    let unverified = Domain {
+        name: "a.example".into(),
+        site: "s".into(),
+        verified: false,
+    };
+    assert!(add_domain_summary("s", &unverified).contains("not verified yet"));
+    assert!(set_env_summary("s", &["A", "B"]).contains("A, B"));
+}
+
+#[test]
+fn tail_logs_keeps_the_newest_entries() {
+    let log = |m: &str| DeploymentLog {
+        created_at_ms: None,
+        kind: "stdout".into(),
+        message: m.into(),
+    };
+    let tailed = tail_logs(vec![log("a"), log("b"), log("c")], 2);
+    assert_eq!(tailed.len(), 2);
+    assert_eq!(tailed[0].message, "b");
+    assert_eq!(tail_logs(vec![log("a")], 5).len(), 1);
+}
+
+#[test]
+fn tool_args_error_displays_its_message() {
+    assert_eq!(ToolArgsError("boom".into()).to_string(), "boom");
+}
