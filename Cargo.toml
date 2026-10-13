@@ -36,10 +36,10 @@ exclude = ["vendor/tinybus"]
 tinyhosts-bus = { path = "crates/tinyhosts-bus", version = "0.4.0" }
 # TinyBus defines the message types, interface macro, and frozen module ABI used
 # by the generated integration. Socket and CLI features are unnecessary here.
-tinybus = { path = "vendor/tinybus/crates/tinybus", version = "0.1.0", default-features = false, features = ["macros", "modules"], optional = true }
+tinybus = { version = ">=0.1.3, <0.2", default-features = false, features = ["macros", "modules"], optional = true }
 # The module-side SDK owns the isolated runtime and exports the ABI entrypoints
 # required by TinyBus's dynamic loader.
-tinybus-module = { path = "vendor/tinybus/crates/tinybus-module", version = "0.1.0", optional = true }
+tinybus-module = { version = ">=0.1.3, <0.2", optional = true }
 # Derive macros for the crate-wide error type in `src/error/mod.rs`.
 thiserror = "2"
 # `Host` is consumed as `dyn Host`, and every method performs network I/O, so
@@ -161,3 +161,11 @@ private_intra_doc_links = "warn"
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
+
+# Standalone builds resolve tinybus from the nested checkout. A host that links
+# this crate (OpenHuman) redirects the same names with its own `[patch]`, so
+# the dependency is a version range, never an exact pin or a plain path.
+[patch.crates-io]
+tinybus = { path = "vendor/tinybus/crates/tinybus" }
+tinybus-macros = { path = "vendor/tinybus/crates/tinybus-macros" }
+tinybus-module = { path = "vendor/tinybus/crates/tinybus-module" }
