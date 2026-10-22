@@ -107,6 +107,31 @@ fn reads_a_directory_tree_and_skips_build_output() {
 }
 
 #[test]
+fn reading_a_directory_skips_credential_files() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path();
+
+    std::fs::write(path.join("package.json"), b"{}").unwrap();
+    std::fs::write(path.join(".env.staging"), b"DB_PASSWORD=nope").unwrap();
+    std::fs::write(
+        path.join(".npmrc"),
+        b"//registry.npmjs.org/:_authToken=nope",
+    )
+    .unwrap();
+    std::fs::create_dir(path.join(".aws")).unwrap();
+    std::fs::write(path.join(".aws/credentials"), b"[default]").unwrap();
+
+    let bundle = Bundle::from_dir(path).unwrap();
+    let paths: Vec<&str> = bundle
+        .files()
+        .iter()
+        .map(|file| file.path.as_str())
+        .collect();
+
+    assert_eq!(paths, ["package.json"]);
+}
+
+#[test]
 fn an_empty_directory_is_not_a_deployment() {
     let root = tempfile::tempdir().unwrap();
 

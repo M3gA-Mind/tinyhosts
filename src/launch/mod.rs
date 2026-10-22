@@ -51,6 +51,7 @@ pub mod types;
 /// retried, not deleted and paid for twice.
 pub async fn launch(host: &dyn Host, plan: &LaunchPlan) -> Result<Launch> {
     plan.validate()?;
+    crate::preparation::validate_deployment_bundle(&plan.bundle)?;
 
     let (site, created_site) = match host.find_site(&plan.site.name).await? {
         Some(site) => (site, false),

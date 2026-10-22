@@ -266,3 +266,7 @@ impl Tool for LaunchSiteTool {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "launch_tests.rs"]
+mod tests;
