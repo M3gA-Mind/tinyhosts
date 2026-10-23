@@ -25,6 +25,11 @@ fn a_launch_plan_never_bundles_credential_files() {
 
     let plan = tool.plan(&json!({"site": "shop"})).expect("a plan");
 
-    let paths: Vec<&str> = plan.bundle.files().iter().map(|f| f.path()).collect();
+    let paths: Vec<&str> = plan
+        .bundle
+        .files()
+        .iter()
+        .map(crate::SiteFile::path)
+        .collect();
     assert_eq!(paths, ["package.json"], "credential files were bundled");
 }
