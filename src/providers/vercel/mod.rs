@@ -216,7 +216,7 @@ impl Host for Vercel {
     async fn find_site(&self, name: &str) -> Result<Option<Site>> {
         let builder = self.http.request(
             Method::GET,
-            &format!("/v9/projects/{}", encode_segment(name)),
+            &format!("/v9/projects/{}", encode_segment(name)?),
             &[],
         );
         let project: Option<Project> = self.http.optional_json(builder, "project").await?;
@@ -259,7 +259,7 @@ impl Host for Vercel {
 
         self.http
             .post_discard(
-                &format!("/v10/projects/{}/env", encode_segment(site)),
+                &format!("/v10/projects/{}/env", encode_segment(site)?),
                 &[("upsert", "true".to_owned())],
                 &body,
                 "environment variables",
@@ -271,7 +271,7 @@ impl Host for Vercel {
         let envs: Envs = self
             .http
             .get_json(
-                &format!("/v10/projects/{}/env", encode_segment(site)),
+                &format!("/v10/projects/{}/env", encode_segment(site)?),
                 &[],
                 "environment variables",
             )
@@ -404,7 +404,7 @@ impl Host for Vercel {
         let deployment: DeploymentBody = self
             .http
             .get_json(
-                &format!("/v13/deployments/{}", encode_segment(id)),
+                &format!("/v13/deployments/{}", encode_segment(id)?),
                 &[],
                 "deployment",
             )
@@ -434,7 +434,7 @@ impl Host for Vercel {
         let events: DeploymentEvents = self
             .http
             .get_json(
-                &format!("/v3/deployments/{}/events", encode_segment(id)),
+                &format!("/v3/deployments/{}/events", encode_segment(id)?),
                 &[],
                 "deployment events",
             )
@@ -454,8 +454,8 @@ impl Host for Vercel {
             Method::POST,
             &format!(
                 "/v10/projects/{}/promote/{}",
-                encode_segment(&project),
-                encode_segment(deployment)
+                encode_segment(&project)?,
+                encode_segment(deployment)?
             ),
             &[],
         );
@@ -472,7 +472,7 @@ impl Host for Vercel {
         let added: DomainBody = self
             .http
             .post_json(
-                &format!("/v10/projects/{}/domains", encode_segment(site)),
+                &format!("/v10/projects/{}/domains", encode_segment(site)?),
                 &[],
                 &CreateDomain { name },
                 "domain",
@@ -486,7 +486,7 @@ impl Host for Vercel {
         let domains: Domains = self
             .http
             .get_json(
-                &format!("/v9/projects/{}/domains", encode_segment(site)),
+                &format!("/v9/projects/{}/domains", encode_segment(site)?),
                 &[],
                 "domain list",
             )
@@ -568,8 +568,10 @@ fn env_targets(targets: &[DeploymentTarget]) -> Vec<&'static str> {
 /// ordinarily made of.
 ///
 /// Everything else — `/`, `?`, `#` included — becomes a percent-escape, so a
-/// caller-supplied identifier cannot add a path segment, a query string, or a
-/// `..` of its own to an authenticated request.
+/// caller-supplied identifier cannot add a path segment or a query string to an
+/// authenticated request. Dots stay unescaped, and an escaped `%2E%2E` is
+/// still a dot-segment once the URL is parsed, so [`encode_segment`] refuses
+/// an identifier that is only dots instead.
 const PATH_SEGMENT: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
     .remove(b'-')
     .remove(b'.')
@@ -577,8 +579,16 @@ const PATH_SEGMENT: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANU
     .remove(b'~');
 
 /// Percent-encodes `value` for use as one path segment.
-fn encode_segment(value: &str) -> impl fmt::Display + '_ {
-    percent_encoding::utf8_percent_encode(value, PATH_SEGMENT)
+///
+/// # Errors
+///
+/// Returns [`Error::InvalidIdentifier`] for an empty, `.` or `..` value, each
+/// of which would address the parent or the collection instead.
+fn encode_segment(value: &str) -> Result<impl fmt::Display + '_> {
+    if matches!(value, "" | "." | "..") {
+        return Err(Error::InvalidIdentifier);
+    }
+    Ok(percent_encoding::utf8_percent_encode(value, PATH_SEGMENT))
 }
 
 /// The SHA-1 digest of a deployment file, hex encoded, as `x-vercel-digest`
@@ -624,3 +634,7 @@ fn buckets(dimension: &str, data: &Value) -> Vec<AnalyticsBucket> {
 #[cfg(test)]
 #[path = "mod_tests.rs"]
 mod test;
+
+#[cfg(test)]
+#[path = "dot_segment_tests.rs"]
+mod dot_segment_tests;

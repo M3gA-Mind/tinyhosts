@@ -48,6 +48,12 @@ pub enum Error {
     #[error("site name must not be empty")]
     EmptySiteName,
 
+    /// A site name, deployment id or other identifier that goes into a
+    /// provider URL path was empty, `.` or `..`, which would address a
+    /// different endpoint than the one named.
+    #[error("identifier must not be empty, `.` or `..`")]
+    InvalidIdentifier,
+
     /// A deployment was requested with no files in it.
     #[error("deployment bundle contains no files")]
     EmptyBundle,
