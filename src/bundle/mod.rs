@@ -284,6 +284,17 @@ fn collect(root: &Path, directory: &Path, bundle: &mut Bundle) -> Result<()> {
             continue;
         }
 
+        let relative = path
+            .strip_prefix(root)
+            .map_err(|error| read_error(&path, &error))?;
+        let relative = relative.to_string_lossy().into_owned();
+        // Checked before descending as well as before reading: a multi-part
+        // credential path (`Microsoft/Protect/...`) has no single excluded
+        // name, so `excluded` alone would walk into it.
+        if crate::preparation::credential_path(&relative) {
+            continue;
+        }
+
         let file_type = entry
             .file_type()
             .map_err(|error| read_error(&path, &error))?;
@@ -297,13 +308,6 @@ fn collect(root: &Path, directory: &Path, bundle: &mut Bundle) -> Result<()> {
             continue;
         }
 
-        let relative = path
-            .strip_prefix(root)
-            .map_err(|error| read_error(&path, &error))?;
-        let relative = relative.to_string_lossy().into_owned();
-        if crate::preparation::credential_path(&relative) {
-            continue;
-        }
         let contents = std::fs::read(&path).map_err(|error| read_error(&path, &error))?;
 
         bundle.insert(relative, contents)?;

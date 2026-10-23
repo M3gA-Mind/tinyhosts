@@ -193,6 +193,33 @@ fn a_directory_that_cannot_be_read_reports_which_one() {
     std::fs::set_permissions(&blocked, std::fs::Permissions::from_mode(0o700)).unwrap();
 }
 
+#[cfg(unix)]
+#[test]
+fn an_unreadable_credential_directory_is_pruned_not_descended() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = tempfile::tempdir().unwrap();
+    std::fs::write(root.path().join("package.json"), b"{}").unwrap();
+    // `Microsoft/Protect` is credential only as a pair, so no single name in
+    // it is excluded; `.env` is excluded by name.
+    let protect = root.path().join("app/Microsoft/Protect");
+    let env = root.path().join("app/.env");
+    for blocked in [&protect, &env] {
+        std::fs::create_dir_all(blocked).unwrap();
+        std::fs::write(blocked.join("key"), b"secret").unwrap();
+        std::fs::set_permissions(blocked, std::fs::Permissions::from_mode(0o000)).unwrap();
+    }
+
+    let result = Bundle::from_dir(root.path());
+
+    for blocked in [&protect, &env] {
+        std::fs::set_permissions(blocked, std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    let bundle = result.unwrap();
+    let paths: Vec<_> = bundle.files().iter().map(SiteFile::path).collect();
+    assert_eq!(paths, ["package.json"]);
+}
+
 #[test]
 fn contents_travel_as_base64() {
     let mut bundle = Bundle::new();
