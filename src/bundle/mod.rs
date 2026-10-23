@@ -200,7 +200,9 @@ impl Bundle {
         Ok(())
     }
 
-    /// Reads a directory tree into a bundle, skipping [`EXCLUDED`] entries.
+    /// Reads a directory tree into a bundle, skipping [`EXCLUDED`] entries and
+    /// credential files (`.env.*`, `.npmrc`, `.aws/`, `.ssh/` and the like), the
+    /// same rules a prepared bundle applies.
     ///
     /// Symbolic links are skipped rather than followed: a link is either
     /// redundant with a file already in the tree or points outside it, and
@@ -278,7 +280,18 @@ fn collect(root: &Path, directory: &Path, bundle: &mut Bundle) -> Result<()> {
         let path = entry.path();
 
         let name = entry.file_name().to_string_lossy().into_owned();
-        if EXCLUDED.contains(&name.as_str()) {
+        if crate::preparation::excluded(&name) {
+            continue;
+        }
+
+        let relative = path
+            .strip_prefix(root)
+            .map_err(|error| read_error(&path, &error))?;
+        let relative = relative.to_string_lossy().into_owned();
+        // Checked before descending as well as before reading: a multi-part
+        // credential path (`Microsoft/Protect/...`) has no single excluded
+        // name, so `excluded` alone would walk into it.
+        if crate::preparation::credential_path(&relative) {
             continue;
         }
 
@@ -295,12 +308,9 @@ fn collect(root: &Path, directory: &Path, bundle: &mut Bundle) -> Result<()> {
             continue;
         }
 
-        let relative = path
-            .strip_prefix(root)
-            .map_err(|error| read_error(&path, &error))?;
         let contents = std::fs::read(&path).map_err(|error| read_error(&path, &error))?;
 
-        bundle.insert(relative.to_string_lossy().into_owned(), contents)?;
+        bundle.insert(relative, contents)?;
     }
 
     Ok(())

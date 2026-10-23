@@ -107,6 +107,31 @@ fn reads_a_directory_tree_and_skips_build_output() {
 }
 
 #[test]
+fn reading_a_directory_skips_credential_files() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path();
+
+    std::fs::write(path.join("package.json"), b"{}").unwrap();
+    std::fs::write(path.join(".env.staging"), b"DB_PASSWORD=nope").unwrap();
+    std::fs::write(
+        path.join(".npmrc"),
+        b"//registry.npmjs.org/:_authToken=nope",
+    )
+    .unwrap();
+    std::fs::create_dir(path.join(".aws")).unwrap();
+    std::fs::write(path.join(".aws/credentials"), b"[default]").unwrap();
+
+    let bundle = Bundle::from_dir(path).unwrap();
+    let paths: Vec<&str> = bundle
+        .files()
+        .iter()
+        .map(|file| file.path.as_str())
+        .collect();
+
+    assert_eq!(paths, ["package.json"]);
+}
+
+#[test]
 fn an_empty_directory_is_not_a_deployment() {
     let root = tempfile::tempdir().unwrap();
 
@@ -166,6 +191,33 @@ fn a_directory_that_cannot_be_read_reports_which_one() {
 
     // Leave the tree removable.
     std::fs::set_permissions(&blocked, std::fs::Permissions::from_mode(0o700)).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn an_unreadable_credential_directory_is_pruned_not_descended() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = tempfile::tempdir().unwrap();
+    std::fs::write(root.path().join("package.json"), b"{}").unwrap();
+    // `Microsoft/Protect` is credential only as a pair, so no single name in
+    // it is excluded; `.env` is excluded by name.
+    let protect = root.path().join("app/Microsoft/Protect");
+    let env = root.path().join("app/.env");
+    for blocked in [&protect, &env] {
+        std::fs::create_dir_all(blocked).unwrap();
+        std::fs::write(blocked.join("key"), b"secret").unwrap();
+        std::fs::set_permissions(blocked, std::fs::Permissions::from_mode(0o000)).unwrap();
+    }
+
+    let result = Bundle::from_dir(root.path());
+
+    for blocked in [&protect, &env] {
+        std::fs::set_permissions(blocked, std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    let bundle = result.unwrap();
+    let paths: Vec<_> = bundle.files().iter().map(SiteFile::path).collect();
+    assert_eq!(paths, ["package.json"]);
 }
 
 #[test]

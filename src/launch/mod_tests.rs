@@ -319,3 +319,18 @@ fn a_plan_round_trips_through_json() {
 
     assert_eq!(serde_json::from_str::<LaunchPlan>(&json).unwrap(), plan);
 }
+
+#[tokio::test]
+async fn a_hand_built_bundle_with_a_credential_file_is_refused_before_any_call() {
+    let server = MockServer::start().await;
+    let mut bundle = bundle();
+    bundle
+        .insert(".npmrc", b"//registry.npmjs.org/:_authToken=x".to_vec())
+        .unwrap();
+    let plan = LaunchPlan::new(SiteSpec::new("shop"), bundle);
+
+    let result = launch(&host(&server), &plan).await;
+
+    assert!(matches!(result, Err(Error::CredentialBundlePath { .. })));
+    assert!(server.received_requests().await.unwrap().is_empty());
+}

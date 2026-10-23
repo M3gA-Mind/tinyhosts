@@ -137,7 +137,7 @@ fn credential_entry(name: &str) -> bool {
     ) || name.starts_with(".env.")
 }
 
-fn credential_path(path: &str) -> bool {
+pub(crate) fn credential_path(path: &str) -> bool {
     let normalized = path.replace('\\', "/").to_ascii_lowercase();
     let parts: Vec<_> = normalized
         .split('/')
@@ -166,7 +166,7 @@ pub(crate) fn validate_deployment_bundle(bundle: &crate::Bundle) -> Result<()> {
     Ok(())
 }
 
-fn excluded(name: &str) -> bool {
+pub(crate) fn excluded(name: &str) -> bool {
     crate::EXCLUDED.contains(&name) || name.starts_with(".env.") || credential_entry(name)
 }
 
