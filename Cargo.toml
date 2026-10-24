@@ -77,7 +77,7 @@ percent-encoding = { version = "2", optional = true }
 # another checkout redirects this one with a `[patch]` entry so both resolve to
 # one package and `tinytools::ToolResult` stays one type. Pinned to the revision
 # tinyagents vendors, which is the copy OpenHuman links.
-tinytools = { version = "0.5", git = "https://github.com/tinyhumansai/tinytools", rev = "bd60b9b52f1998b4483b9cf107a72d3338e672f8", optional = true }
+tinytools = { version = "0.6", git = "https://github.com/tinyhumansai/tinytools", rev = "3a01641f8ebd8a55656cd212f9a90638d958a447", optional = true }
 # `tinytools::Tool::execute` returns `anyhow::Result`.
 anyhow = { version = "1", optional = true }
 # The launch and rollback tools log the one outward call each makes.
